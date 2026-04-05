@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import connection from '../mysql_connect.js';
 import { checkPassword, encryptPassword } from '../utils/passwordEncryptDecrypt.js';
-import { createTokenForUser } from '../utils/createVerifyToken.js';
+import { createTokenForUser, verifyTokenForUser } from '../utils/createVerifyToken.js';
 const Route = Router();
 
 Route.get('/all-users', async (req, res) => {
@@ -37,6 +37,7 @@ Route.post('/login', async (req, res) => {
 
 Route.post('/signup', async (req, res) => {
     const { first_name, last_name, username, email, password } = req.body;
+    console.log(req.body);
     try {
         const [emailExist] = await connection.execute('Select email from users where email = ?', [email]);
         if (emailExist.length > 0) {
@@ -50,7 +51,7 @@ Route.post('/signup', async (req, res) => {
         const [row] = await connection.execute('Insert into users(first_name, last_name, username, email, password) values(?, ?, ?, ?, ?)',
             [first_name, last_name, username, email, encryptedPassword]);
 
-        return res.json(row);
+        return res.send({status: "success", message: "User successfully Created"});
     } catch (error) {
         console.log(error);
         return res.status(500).send({ message: "Something went wrong" });
@@ -58,4 +59,23 @@ Route.post('/signup', async (req, res) => {
 
 })
 
+Route.get('/getUser', async (req, res) => {
+    const token = req.cookies['token'];
+    if (!token) {
+        return res.status(401).send({ message: "You are not authorized" });
+    }
+    try {
+        const userData = verifyTokenForUser(token);
+        return res.send(userData);
+    }
+    catch (error) {
+        console.log(error);
+        return res.status(401).send({ message: "You are not authorized" });
+    }
+})
+
+Route.post('/logout', async(req, res) => {
+    res.clearCookie('token');
+    res.send({message: "success"})
+})
 export default Route;

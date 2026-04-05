@@ -17,7 +17,7 @@ const app = express();
 app.use(express.json()); // For parsing JSON response
 app.use(cookieParser()); // For parsing cookies
 
-app.use('/user', userRoute);
+app.use('/api/user', userRoute);
 app.use('/api', checkForCookies, messageRoute);
 
 
