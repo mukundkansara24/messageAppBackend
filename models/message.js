@@ -1,4 +1,4 @@
-import { Schema, model, models } from "mongoose";
+import { Schema, model } from "mongoose";
 
 const messageSchema = new Schema({
     group_id: {
@@ -15,14 +15,7 @@ const messageSchema = new Schema({
     },
     message_text: {
         type: String,
-        required: true,
-    },
-    attachments: [
-        {
-            fileType: { type: String },
-            url: { type: String },
-        }
-    ]
+    }
 }, { timestamps: true })
 
 const Message = model('message', messageSchema);

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import connection from '../mysql_connect.js';
+import Message from '../models/message.js';
 
 const route = Router();
 
@@ -56,11 +57,35 @@ route.post('/sendMessage', async (req, res) => {
     const userData = req.user;
     const bodyData = req.body;
     try {
-        
+        const message = await Message.create({
+            group_id: bodyData.group_id,
+            sender_id: userData.id,
+            sender_name: userData.username,
+            message_text: bodyData.message_text,
+        });
+        // console.log(message);
+        res.status(201).json({
+            success: true,
+            data: message
+        });
     }
-    catch(error) {
-
+    catch (error) {
+        console.log(error);
+        res.status(500).send({ message: "Something went wrong" });
     }
 });
+
+route.get('/getMessage', async (req, res) => {
+    const userData = req.user;
+    const bodyData = req.body;
+    try {
+        const message = await Message.find({ group_id: bodyData.group_id });
+        res.send(message);
+    }
+    catch (error) {
+        console.log(error);
+        res.status(500).send({ message: "Something went wrong" });
+    }
+})
 
 export default route;
