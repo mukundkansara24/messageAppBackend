@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import connection from '../mysql_connect.js';
 import Message from '../models/message.js';
+import { getIO } from '../utils/socket.js';
 
 const route = Router();
 
@@ -42,7 +43,7 @@ route.post('/addPrivateGroup', async (req, res) => {
 
 route.get('/findUsernameInPrivateGroup', async (req, res) => {
     const userData = req.user;
-    const rowId = req.body.group_id;
+    const rowId = req.query.group_id;
     try {
         const [row] = await connection.execute('SELECT u.username FROM user_group_members ugm JOIN users u ON u.id = ugm.user_id WHERE ugm.group_id = ? AND ugm.user_id != ?;', [rowId, userData.id]);
         res.send(row);
@@ -63,6 +64,9 @@ route.post('/sendMessage', async (req, res) => {
             sender_name: userData.username,
             message_text: bodyData.message_text,
         });
+
+        const io = getIO();
+        io.to(bodyData.group_id).emit('chat message', message);
         // console.log(message);
         res.status(201).json({
             success: true,
@@ -76,10 +80,9 @@ route.post('/sendMessage', async (req, res) => {
 });
 
 route.get('/getMessage', async (req, res) => {
-    const userData = req.user;
-    const bodyData = req.body;
+    const group_id = req.query.group_id;
     try {
-        const message = await Message.find({ group_id: bodyData.group_id });
+        const message = await Message.find({ group_id });
         res.send(message);
     }
     catch (error) {

@@ -4,6 +4,9 @@ import userRoute from './routes/userRoute.js';
 import messageRoute from './routes/messageRoute.js';
 import { checkForCookies } from './middlewares/authentication.js';
 import cookieParser from 'cookie-parser';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import { initializeSocket } from './utils/socket.js';
 
 const PORT = 8000;
 // For connecting mongodb
@@ -14,6 +17,11 @@ mongoose.connect('mongodb://127.0.0.1:27017/messageApp')
 
 
 const app = express();
+const httpServer = createServer(app);
+
+initializeSocket(httpServer);
+
+
 app.use(express.json()); // For parsing JSON response
 app.use(cookieParser()); // For parsing cookies
 
@@ -21,6 +29,6 @@ app.use('/api/user', userRoute);
 app.use('/api', checkForCookies, messageRoute);
 
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
     console.log(`Server started at http://localhost:${PORT}`);
 })
