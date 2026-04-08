@@ -8,7 +8,7 @@ const route = Router();
 route.get('/listGroup', async (req, res) => {
     const userData = req.user;
     try {
-        const [row] = await connection.execute('SELECT g.id, g.name FROM user_group g JOIN user_group_members ugm ON g.id = ugm.group_id WHERE ugm.user_id = ?;', [userData.id]);
+        const [row] = await connection.execute('SELECT g.id, g.name, g.updatedAt FROM user_group g JOIN user_group_members ugm ON g.id = ugm.group_id WHERE ugm.user_id = ?;', [userData.id]);
         res.send(row);
     }
     catch (error) {
@@ -58,6 +58,8 @@ route.post('/sendMessage', async (req, res) => {
     const userData = req.user;
     const bodyData = req.body;
     try {
+
+        // Store Message in MONGODB
         const message = await Message.create({
             group_id: bodyData.group_id,
             sender_id: userData.id,
@@ -65,6 +67,9 @@ route.post('/sendMessage', async (req, res) => {
             message_text: bodyData.message_text,
         });
 
+        // update group time
+        const response = await connection.execute('Update user_group set updatedAt = CURRENT_TIMESTAMP where id = ?', [bodyData.group_id]);
+        // console.log(response);
         const io = getIO();
         io.to(bodyData.group_id).emit('chat message', message);
         // console.log(message);
