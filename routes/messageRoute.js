@@ -9,11 +9,11 @@ route.get('/listGroup', async (req, res) => {
     const userData = req.user;
     try {
         const [row] = await connection.execute('SELECT g.id, g.name, g.updatedAt FROM user_group g JOIN user_group_members ugm ON g.id = ugm.group_id WHERE ugm.user_id = ?;', [userData.id]);
-        res.send(row);
+        return res.send(row);
     }
     catch (error) {
         console.log(error);
-        res.status(500).send({ message: "Something went wrong" });
+        return res.status(500).send({ message: "Something went wrong" });
     }
 })
 
@@ -37,7 +37,7 @@ route.post('/addPrivateGroup', async (req, res) => {
     }
     catch (error) {
         console.log(error);
-        res.status(500).send({ message: "Something went wrong" });
+        return res.status(500).send({ message: "Something went wrong" });
     }
 })
 
@@ -46,11 +46,11 @@ route.get('/findUsernameInPrivateGroup', async (req, res) => {
     const rowId = req.query.group_id;
     try {
         const [row] = await connection.execute('SELECT u.username FROM user_group_members ugm JOIN users u ON u.id = ugm.user_id WHERE ugm.group_id = ? AND ugm.user_id != ?;', [rowId, userData.id]);
-        res.send(row);
+        return res.send(row);
     }
     catch (error) {
         console.log(error);
-        res.status(500).send({ message: "Something went wrong" });
+        return res.status(500).send({ message: "Something went wrong" });
     }
 });
 
@@ -73,14 +73,14 @@ route.post('/sendMessage', async (req, res) => {
         const io = getIO();
         io.to(bodyData.group_id).emit('chat message', message);
         // console.log(message);
-        res.status(201).json({
+        return res.status(201).json({
             success: true,
             data: message
         });
     }
     catch (error) {
         console.log(error);
-        res.status(500).send({ message: "Something went wrong" });
+        return res.status(500).send({ message: "Something went wrong" });
     }
 });
 
@@ -88,11 +88,26 @@ route.get('/getMessage', async (req, res) => {
     const group_id = req.query.group_id;
     try {
         const message = await Message.find({ group_id });
-        res.send(message);
+        return res.send(message);
     }
     catch (error) {
         console.log(error);
-        res.status(500).send({ message: "Something went wrong" });
+        return res.status(500).send({ message: "Something went wrong" });
+    }
+})
+
+route.get('/listUser', async (req, res) => {
+    const nameEntered = req.query?.name;
+    try {
+        if(!nameEntered) {
+            return res.status(400).send({message: "Please enter username"});
+        }
+        const [row] = await connection.execute("Select id, username from users where username LIKE CONCAT(?, '%')", [nameEntered]);
+        return res.send(row);
+    }
+    catch (error) {
+        console.log(error);
+        return res.status(500).send({ message: "Something went wrong" });
     }
 })
 
