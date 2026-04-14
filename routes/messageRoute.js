@@ -33,7 +33,7 @@ route.post('/addPrivateGroup', async (req, res) => {
         const [userAdd1] = await connection.execute('Insert into user_group_members(user_id, group_id) values(?, ?);', [userData.id, rowId]);
         const [userAdd2] = await connection.execute('Insert into user_group_members(user_id, group_id) values(?, ?);', [data.id, rowId]);
 
-        return res.send({ group_id: rowId });
+        return res.send([{ group_id: rowId }]);
     }
     catch (error) {
         console.log(error);
