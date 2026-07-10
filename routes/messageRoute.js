@@ -96,6 +96,7 @@ route.get('/getMessage', async (req, res) => {
     }
 })
 
+// This is use for searching username by giving input from search
 route.get('/listUser', async (req, res) => {
     const nameEntered = req.query?.name;
     try {
