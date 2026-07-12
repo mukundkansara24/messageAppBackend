@@ -16,4 +16,4 @@ function checkForCookies(req, res, next) {
     return next();
 }
 
-export { checkForCookies };
+export default checkForCookies;

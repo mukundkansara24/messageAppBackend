@@ -1,4 +1,3 @@
-import { connect } from 'mongoose';
 import mysql from 'mysql2/promise';
 
 // For connecting mysql

@@ -4,19 +4,19 @@ import { checkPassword, encryptPassword } from '../utils/passwordEncryptDecrypt.
 import { createTokenForUser, verifyTokenForUser } from '../utils/createVerifyToken.js';
 const Route = Router();
 
-Route.get('/all-users', async (req, res) => {
-    const [row, fields] = await connection.execute('Select * from users where email = 123');
+// Route.get('/all-users', async (req, res) => {
+//     const [row, fields] = await connection.execute('Select * from users where email = 123');
 
 
-    console.log("row = ", row);
-    console.log("\nfields = ", fields);
-});
+//     console.log("row = ", row);
+//     console.log("\nfields = ", fields);
+// });
 
 Route.post('/login', async (req, res) => {
     console.log(req.body);
     const { email, password } = req.body;
     try {
-        const [row, fields] = await connection.execute('Select * from users where email = ?', [email]);
+        const [row] = await connection.execute('Select * from users where email = ?', [email]);
         if (row.length === 0) {
             return res.status(401).send({ message: "Incorrect email or password" });
         }
@@ -24,6 +24,7 @@ Route.post('/login', async (req, res) => {
         if (passwordCheck === false) {
             return res.status(401).send({ message: "Incorrect email or password" });
         }
+        // Here we are storing user information through token in cookies which we will further use for getting user information.
         const jwtToken = createTokenForUser(row[0]);
         res.cookie('token', jwtToken);
         return res.json(row);
@@ -41,7 +42,7 @@ Route.post('/signup', async (req, res) => {
     try {
         const [emailExist] = await connection.execute('Select email from users where email = ?', [email]);
         if (emailExist.length > 0) {
-            return res.status(409).send({ message: "Email already exists" });
+            return res.status(409).send({ message: "Email already exists"});
         }
         const [usernameExist] = await connection.execute('Select username from users where username = ?', [username]);
         if (usernameExist.length > 0) {

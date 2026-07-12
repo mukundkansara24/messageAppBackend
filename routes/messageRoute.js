@@ -5,6 +5,7 @@ import { getIO } from '../utils/socket.js';
 
 const route = Router();
 
+// This is for listing all senders.
 route.get('/listGroup', async (req, res) => {
     const userData = req.user;
     try {
