@@ -30,7 +30,7 @@ route.post('/addPrivateGroup', async (req, res) => {
         }
         const [newGroup] = await connection.execute('Insert into user_group values();');
         // console.log(newGroup);
-        const rowId = newGroup.insertId;
+        const rowId = newGroup.insertId; // I will get primary id of row
         const [userAdd1] = await connection.execute('Insert into user_group_members(user_id, group_id) values(?, ?);', [userData.id, rowId]);
         const [userAdd2] = await connection.execute('Insert into user_group_members(user_id, group_id) values(?, ?);', [data.id, rowId]);
 
@@ -68,7 +68,7 @@ route.post('/sendMessage', async (req, res) => {
             message_text: bodyData.message_text,
         });
 
-        // update group time
+        // update group time in MySQL
         const response = await connection.execute('Update user_group set updatedAt = CURRENT_TIMESTAMP where id = ?', [bodyData.group_id]);
         // console.log(response);
         const io = getIO();
