@@ -1,21 +1,26 @@
 import mysql from 'mysql2/promise';
 
-// For connecting mysql
-let connection = undefined;
-try {
-    connection = await mysql.createConnection({
-        host: '127.0.0.1',
-        user: 'root',
-        password: 'mukund',
-        database: 'messageapp'
-    });
-}
-catch (e) {
-    console.log('Error in connecting mysql', e);
-}
+const pool = mysql.createPool({
+    host: process.env.MYSQL_HOST || '127.0.0.1',
+    user: process.env.MYSQL_USER || 'root',
+    password: process.env.MYSQL_PASSWORD,
+    database: process.env.MYSQL_NAME || 'messageapp',
+    port: Number(process.env.MYSQL_PORT) || 3306,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+});
 
-if (connection) {
-    console.log('MySQL successfully Connected');
-}
 
-export default connection;
+// Immediately Invoked Function Expression (IIFE)
+(async () => {
+    try {
+        const connection = await pool.getConnection();
+        console.log('MySQL successfully connected');
+        connection.release();
+    } catch (error) {
+        console.error('Error connecting to MySQL:', error.message);
+    }
+})();
+
+export default pool;

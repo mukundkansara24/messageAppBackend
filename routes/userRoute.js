@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import connection from '../mysql_connect.js';
+import pool from '../mysql_connect.js';
 import { checkPassword, encryptPassword } from '../utils/passwordEncryptDecrypt.js';
 import { createTokenForUser, verifyTokenForUser } from '../utils/createVerifyToken.js';
 const Route = Router();
 
 // Route.get('/all-users', async (req, res) => {
-//     const [row, fields] = await connection.execute('Select * from users where email = 123');
+//     const [row, fields] = await pool.execute('Select * from users where email = 123');
 
 
 //     console.log("row = ", row);
@@ -16,7 +16,7 @@ Route.post('/login', async (req, res) => {
     console.log(req.body);
     const { email, password } = req.body;
     try {
-        const [row] = await connection.execute('Select * from users where email = ?', [email]);
+        const [row] = await pool.execute('Select * from users where email = ?', [email]);
         if (row.length === 0) {
             return res.status(401).send({ message: "Incorrect email or password" });
         }
@@ -40,16 +40,16 @@ Route.post('/signup', async (req, res) => {
     const { first_name, last_name, username, email, password } = req.body;
     console.log(req.body);
     try {
-        const [emailExist] = await connection.execute('Select email from users where email = ?', [email]);
+        const [emailExist] = await pool.execute('Select email from users where email = ?', [email]);
         if (emailExist.length > 0) {
             return res.status(409).send({ message: "Email already exists"});
         }
-        const [usernameExist] = await connection.execute('Select username from users where username = ?', [username]);
+        const [usernameExist] = await pool.execute('Select username from users where username = ?', [username]);
         if (usernameExist.length > 0) {
             return res.status(409).send({ message: "Username already exists" });
         }
         const encryptedPassword = await encryptPassword(password);
-        const [row] = await connection.execute('Insert into users(first_name, last_name, username, email, password) values(?, ?, ?, ?, ?)',
+        const [row] = await pool.execute('Insert into users(first_name, last_name, username, email, password) values(?, ?, ?, ?, ?)',
             [first_name, last_name, username, email, encryptedPassword]);
 
         return res.send({status: "success", message: "User successfully Created"});
