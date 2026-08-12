@@ -26,7 +26,12 @@ Route.post('/login', async (req, res) => {
         }
         // Here we are storing user information through token in cookies which we will further use for getting user information.
         const jwtToken = createTokenForUser(row[0]);
-        res.cookie('token', jwtToken);
+        res.cookie('token', jwtToken, {
+            httpOnly: true,
+            secure: true,      // REQUIRED for cross-site cookies (requires HTTPS)
+            sameSite: 'none',  // REQUIRED for cross-site cookies
+            maxAge: 24 * 60 * 60 * 1000 // 1 day
+        });
         return res.json(row);
     }
     catch (error) {
@@ -42,7 +47,7 @@ Route.post('/signup', async (req, res) => {
     try {
         const [emailExist] = await pool.execute('Select email from users where email = ?', [email]);
         if (emailExist.length > 0) {
-            return res.status(409).send({ message: "Email already exists"});
+            return res.status(409).send({ message: "Email already exists" });
         }
         const [usernameExist] = await pool.execute('Select username from users where username = ?', [username]);
         if (usernameExist.length > 0) {
@@ -52,7 +57,7 @@ Route.post('/signup', async (req, res) => {
         const [row] = await pool.execute('Insert into users(first_name, last_name, username, email, password) values(?, ?, ?, ?, ?)',
             [first_name, last_name, username, email, encryptedPassword]);
 
-        return res.send({status: "success", message: "User successfully Created"});
+        return res.send({ status: "success", message: "User successfully Created" });
     } catch (error) {
         console.log(error);
         return res.status(500).send({ message: "Something went wrong" });
@@ -75,8 +80,8 @@ Route.get('/getUser', async (req, res) => {
     }
 })
 
-Route.post('/logout', async(req, res) => {
+Route.post('/logout', async (req, res) => {
     res.clearCookie('token');
-    res.send({message: "success"})
+    res.send({ message: "success" })
 })
 export default Route;
