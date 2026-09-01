@@ -23,7 +23,7 @@ mongoose.connect(MONGO_URI)
 const app = express();
 const httpServer = createServer(app);
 
-initializeSocket(httpServer);
+await initializeSocket(httpServer);
 
 const allowedOrigins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : ['http://localhost:5173'];
 app.use(cors({

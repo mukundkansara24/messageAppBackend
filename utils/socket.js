@@ -1,9 +1,14 @@
 import { Server } from 'socket.io';
 import 'dotenv/config';
+import { createClient } from 'redis';
+import { createAdapter } from '@socket.io/redis-adapter';
+
+
+const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
 
 let io;
 
-function initializeSocket(server) {
+async function initializeSocket(server) {
 
     const allowedOrigins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : ["http://localhost:5173", "http://localhost:3000"];
 
@@ -28,6 +33,18 @@ function initializeSocket(server) {
             socket.join(room);
         })
     });
+
+    const pubClient = createClient({ url: REDIS_URL });
+    const subClient = pubClient.duplicate();
+
+    try {
+        await Promise.all([pubClient.connect(), subClient.connect()]);
+        io.adapter(createAdapter(pubClient, subClient));
+        console.log("Redis adapter connected");
+    }
+    catch (error) {
+        console.error("Redis connection failed, running in single-server mode. Retrying automatically...", error);
+    }
 }
 
 function getIO() {
