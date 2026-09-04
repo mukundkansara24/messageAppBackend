@@ -15,6 +15,11 @@ const messageSchema = new Schema({
     },
     message_text: {
         type: String,
+    },
+    client_msg_id: {
+        type: String,
+        index: true,
+        sparse: true,
     }
 }, { timestamps: true })
 

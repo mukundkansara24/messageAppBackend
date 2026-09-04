@@ -59,6 +59,16 @@ route.post('/sendMessage', async (req, res) => {
     const userData = req.user;
     const bodyData = req.body;
     try {
+        // Check for idempotency via client_msg_id
+        if (bodyData.client_msg_id) {
+            const existingMessage = await Message.findOne({ client_msg_id: bodyData.client_msg_id });
+            if (existingMessage) {
+                return res.status(200).json({
+                    success: true,
+                    data: existingMessage
+                });
+            }
+        }
 
         // Store Message in MONGODB
         const message = await Message.create({
@@ -66,14 +76,15 @@ route.post('/sendMessage', async (req, res) => {
             sender_id: userData.id,
             sender_name: userData.username,
             message_text: bodyData.message_text,
+            client_msg_id: bodyData.client_msg_id,
         });
 
         // update group time in MySQL
-        const response = await pool.execute('Update user_group set updatedAt = CURRENT_TIMESTAMP where id = ?', [bodyData.group_id]);
-        // console.log(response);
+        await pool.execute('Update user_group set updatedAt = CURRENT_TIMESTAMP where id = ?', [bodyData.group_id]);
+
         const io = getIO();
         io.to(bodyData.group_id).emit('chat message', message);
-        // console.log(message);
+
         return res.status(201).json({
             success: true,
             data: message
