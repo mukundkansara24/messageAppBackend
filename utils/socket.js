@@ -30,8 +30,8 @@ async function initializeSocket(server) {
         });
 
         socket.on('join room', (room) => {
-            socket.join(room);
-        })
+            socket.join(String(room));
+        });
     });
 
     const pubClient = createClient({ url: REDIS_URL });

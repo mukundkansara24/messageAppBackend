@@ -63,6 +63,8 @@ route.post('/sendMessage', async (req, res) => {
         if (bodyData.client_msg_id) {
             const existingMessage = await Message.findOne({ client_msg_id: bodyData.client_msg_id });
             if (existingMessage) {
+                const io = getIO();
+                io.to(String(bodyData.group_id)).emit('chat message', existingMessage);
                 return res.status(200).json({
                     success: true,
                     data: existingMessage
@@ -83,7 +85,7 @@ route.post('/sendMessage', async (req, res) => {
         await pool.execute('Update user_group set updatedAt = CURRENT_TIMESTAMP where id = ?', [bodyData.group_id]);
 
         const io = getIO();
-        io.to(bodyData.group_id).emit('chat message', message);
+        io.to(String(bodyData.group_id)).emit('chat message', message);
 
         return res.status(201).json({
             success: true,
