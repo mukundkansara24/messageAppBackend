@@ -10,6 +10,14 @@
 
 ## Code Style & Conventions
 
+### Guiding Principle: KISS (Keep It Simple, Stupid)
+- Always prefer the simplest solution that correctly solves the problem — avoid over-engineering, unnecessary abstraction layers, or premature optimization.
+- Do not add configurability, generalization, or extra flexibility that isn't currently needed ("YAGNI" — You Aren't Gonna Need It).
+- Prefer straightforward, readable code over clever one-liners or complex patterns.
+- If a simple `if/else` or plain function does the job, don't reach for a design pattern, factory, or extra abstraction.
+- Break large components/functions down, but don't fragment logic into excessive tiny pieces purely for the sake of "modularity" — clarity comes first.
+- When in doubt, choose the version of the code a new contributor could understand in under a minute.
+
 ### General Rules
 - Keep components small and modular in single files.
 - Use explicit async/await over raw Promises.
