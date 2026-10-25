@@ -16,6 +16,16 @@ const messageSchema = new Schema({
     message_text: {
         type: String,
     },
+    ciphertext: {
+        type: String, // Base64 encoded encrypted payload
+    },
+    iv: {
+        type: String, // Base64 encoded 12-byte IV
+    },
+    is_encrypted: {
+        type: Boolean,
+        default: false,
+    },
     client_msg_id: {
         type: String,
         index: true,
