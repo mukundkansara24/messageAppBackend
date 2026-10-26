@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import 'dotenv/config';
 
-const saltRounds = process.env.SALT_ROUND;
+const saltRounds = Number(process.env.SALT_ROUND) || 10;
 
 async function encryptPassword(password) {
     const hash = await bcrypt.hash(password, saltRounds);

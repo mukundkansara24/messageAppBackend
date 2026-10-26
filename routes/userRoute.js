@@ -152,4 +152,82 @@ Route.post('/logout', async (req, res) => {
     res.clearCookie('token');
     res.send({ message: "success" })
 })
+
+// Store or update current user's ECDH public key in MySQL
+Route.post('/public-key', async (req, res) => {
+    const token = req.cookies['token'];
+    if (!token) {
+        return res.status(401).send({ message: "You are not authorized" });
+    }
+    try {
+        const userData = verifyTokenForUser(token);
+        const { publicKey } = req.body;
+        if (!publicKey) {
+            return res.status(400).send({ message: "Public key is required" });
+        }
+
+        const keyStr = typeof publicKey === 'string' ? publicKey : JSON.stringify(publicKey);
+        await pool.execute('UPDATE users SET public_key = ? WHERE id = ?', [keyStr, userData.id]);
+
+        return res.json({ success: true, message: "Public key updated" });
+    } catch (error) {
+        console.error('Error saving public key:', error);
+        return res.status(500).send({ message: "Failed to save public key" });
+    }
+});
+
+// Fetch a user's ECDH public key by userId
+Route.get('/public-key', async (req, res) => {
+    const { userId } = req.query;
+    if (!userId) {
+        return res.status(400).send({ message: "userId query parameter is required" });
+    }
+    try {
+        const [rows] = await pool.execute('SELECT id, username, public_key FROM users WHERE id = ?', [userId]);
+        if (!rows || rows.length === 0 || !rows[0].public_key) {
+            return res.status(404).send({ message: "Public key not found for user" });
+        }
+        return res.json({ success: true, public_key: rows[0].public_key });
+    } catch (error) {
+        console.error('Error fetching public key:', error);
+        return res.status(500).send({ message: "Failed to fetch public key" });
+    }
+});
+
+// Fetch all public keys for other members in a group
+Route.get('/group-public-keys', async (req, res) => {
+    const token = req.cookies['token'];
+    if (!token) {
+        return res.status(401).send({ message: "You are not authorized" });
+    }
+    const { group_id } = req.query;
+    if (!group_id) {
+        return res.status(400).send({ message: "group_id query parameter is required" });
+    }
+
+    try {
+        const userData = verifyTokenForUser(token);
+        const [rows] = await pool.execute(
+            'SELECT u.id, u.username, u.public_key FROM users u JOIN user_group_members ugm ON u.id = ugm.user_id WHERE ugm.group_id = ? AND u.id != ?',
+            [group_id, userData.id]
+        );
+
+        const keysMap = {};
+        for (const row of rows) {
+            if (row.public_key) {
+                try {
+                    keysMap[row.id] = JSON.parse(row.public_key);
+                } catch {
+                    keysMap[row.id] = row.public_key;
+                }
+            }
+        }
+
+        return res.json({ success: true, keys: keysMap });
+    } catch (error) {
+        console.error('Error fetching group public keys:', error);
+        return res.status(500).send({ message: "Failed to fetch group public keys" });
+    }
+});
+
 export default Route;

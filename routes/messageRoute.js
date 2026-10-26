@@ -1,7 +1,9 @@
+import express from 'express';
 import { Router } from 'express';
 import pool from '../mysql_connect.js';
 import Message from '../models/message.js';
 import { getIO } from '../utils/socket.js';
+import { decodeHeader, decodeChatMessagePayload, encodeAckPacket, encodeChatMessagePacket } from '../utils/binaryProtocol.js';
 
 const route = Router();
 
@@ -55,42 +57,60 @@ route.get('/findUsernameInPrivateGroup', async (req, res) => {
     }
 });
 
-route.post('/sendMessage', async (req, res) => {
+route.post('/sendMessage', express.raw({ type: 'application/octet-stream', limit: '2mb' }), async (req, res) => {
     const userData = req.user;
-    const bodyData = req.body;
+    const buffer = req.body;
+
+    if (!Buffer.isBuffer(buffer) || buffer.length < 10) {
+        return res.status(400).send({ message: "Invalid binary message packet" });
+    }
+
     try {
+        const header = decodeHeader(buffer.subarray(0, 10));
+        const payload = decodeChatMessagePayload(buffer.subarray(10));
+
         // Check for idempotency via client_msg_id
-        if (bodyData.client_msg_id) {
-            const existingMessage = await Message.findOne({ client_msg_id: bodyData.client_msg_id });
+        if (payload.clientMsgId) {
+            const existingMessage = await Message.findOne({ client_msg_id: payload.clientMsgId });
             if (existingMessage) {
                 const io = getIO();
-                io.to(String(bodyData.group_id)).emit('chat message', existingMessage);
-                return res.status(200).json({
-                    success: true,
-                    data: existingMessage
+                io.to(String(header.groupId)).emit('chat message', buffer);
+                const ackPacket = encodeAckPacket({
+                    groupId: header.groupId,
+                    clientMsgId: payload.clientMsgId,
+                    status: 0,
+                    serverMsgId: String(existingMessage._id),
                 });
+                res.setHeader('Content-Type', 'application/octet-stream');
+                return res.status(200).send(ackPacket);
             }
         }
 
         // Store Message in MONGODB
         const message = await Message.create({
-            group_id: bodyData.group_id,
-            sender_id: userData.id,
+            group_id: String(header.groupId),
+            sender_id: String(userData.id),
             sender_name: userData.username,
-            message_text: bodyData.message_text,
-            client_msg_id: bodyData.client_msg_id,
+            ciphertext: payload.ciphertext.toString('base64'),
+            iv: payload.iv.toString('base64'),
+            is_encrypted: true,
+            client_msg_id: payload.clientMsgId,
         });
 
         // update group time in MySQL
-        await pool.execute('Update user_group set updatedAt = CURRENT_TIMESTAMP where id = ?', [bodyData.group_id]);
+        await pool.execute('Update user_group set updatedAt = CURRENT_TIMESTAMP where id = ?', [header.groupId]);
 
         const io = getIO();
-        io.to(String(bodyData.group_id)).emit('chat message', message);
+        io.to(String(header.groupId)).emit('chat message', buffer);
 
-        return res.status(201).json({
-            success: true,
-            data: message
+        const ackPacket = encodeAckPacket({
+            groupId: header.groupId,
+            clientMsgId: payload.clientMsgId,
+            status: 0,
+            serverMsgId: String(message._id),
         });
+        res.setHeader('Content-Type', 'application/octet-stream');
+        return res.status(201).send(ackPacket);
     }
     catch (error) {
         console.log(error);
@@ -100,15 +120,38 @@ route.post('/sendMessage', async (req, res) => {
 
 route.get('/getMessage', async (req, res) => {
     const group_id = req.query.group_id;
+    if (!group_id) {
+        return res.status(400).send({ message: "group_id query parameter is required" });
+    }
+
     try {
-        const message = await Message.find({ group_id });
-        return res.send(message);
+        const messages = await Message.find({ group_id }).sort({ createdAt: 1 });
+        const packets = [];
+
+        for (const m of messages) {
+            if (m.ciphertext && m.iv) {
+                const ivBuf = Buffer.from(m.iv, 'base64');
+                const cipherBuf = Buffer.from(m.ciphertext, 'base64');
+                const packet = encodeChatMessagePacket({
+                    groupId: Number(m.group_id),
+                    senderId: Number(m.sender_id),
+                    iv: ivBuf,
+                    clientMsgId: m.client_msg_id || String(m._id),
+                    ciphertext: cipherBuf,
+                });
+                packets.push(packet);
+            }
+        }
+
+        const fullBuffer = packets.length > 0 ? Buffer.concat(packets) : Buffer.alloc(0);
+        res.setHeader('Content-Type', 'application/octet-stream');
+        return res.send(fullBuffer);
     }
     catch (error) {
         console.log(error);
         return res.status(500).send({ message: "Something went wrong" });
     }
-})
+});
 
 // This is use for searching username by giving input from search
 route.get('/listUser', async (req, res) => {
